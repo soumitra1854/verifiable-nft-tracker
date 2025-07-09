@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>On-Chain Provenance Tracker</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f4f9; }
+        h1, h2 { color: #333; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        input[type="text"] { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 300px; }
+        .item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 5px; background-color: #fff; }
+        .item p { margin: 0; }
+        hr { border: 0; height: 1px; background: #ddd; }
+        #walletAddress { font-family: monospace; color: #555; }
+    </style>
+</head>
+<body>
+    <h1>On-Chain Provenance Tracker</h1>
+    <button id="connectWalletBtn">Connect Wallet</button>
+    <p id="walletAddress"></p>
+
+    <hr>
+
+    <h2>Register a New Item</h2>
+    <input type="text" id="itemName" placeholder="Enter item name">
+    <button id="registerBtn">Register Item</button>
+
+    <hr>
+
+    <h2>Registered Items</h2>
+    <div id="itemsContainer">Loading items...</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
