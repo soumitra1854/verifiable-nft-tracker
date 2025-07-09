@@ -1,36 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-g">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>On-Chain Provenance Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f4f9; }
-        h1, h2 { color: #333; }
-        button { background-color: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; }
-        button:hover { background-color: #0056b3; }
-        input[type="text"] { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 300px; }
-        .item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 5px; background-color: #fff; }
-        .item p { margin: 0; }
-        hr { border: 0; height: 1px; background: #ddd; }
-        #walletAddress { font-family: monospace; color: #555; }
+        :root {
+            --primary-color: #3B82F6; /* Blue-500 */
+            --primary-hover: #2563EB; /* Blue-600 */
+            --bg-color: #F3F4F6;      /* Gray-100 */
+            --card-color: #FFFFFF;
+            --text-color: #1F2937;   /* Gray-800 */
+            --subtle-text: #6B7280;  /* Gray-500 */
+            --border-color: #E5E7EB; /* Gray-200 */
+            --shadow-color: rgba(0, 0, 0, 0.05);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: grid;
+            gap: 2rem;
+        }
+
+        .card {
+            background-color: var(--card-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px var(--shadow-color), 0 2px 4px -2px var(--shadow-color);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        h1 {
+            font-size: 1.875rem; /* 30px */
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        h2 {
+            font-size: 1.25rem; /* 20px */
+            margin-top: 0;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        #walletAddress {
+            font-family: monospace;
+            color: var(--subtle-text);
+            background-color: var(--bg-color);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            word-break: break-all;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: var(--primary-hover); }
+
+        .item {
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .item p { margin: 0 0 0.5rem 0; }
+        .item p strong { color: var(--text-color); }
+        .item p span { font-family: monospace; color: var(--subtle-text); }
+        .item-footer { margin-top: 1rem; display: flex; gap: 0.5rem; }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: none; /* Initially hidden */
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            position: relative;
+        }
+        .close-btn {
+            position: absolute;
+            top: 1rem; right: 1rem;
+            background: transparent;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--subtle-text);
+        }
+        #historyContent { white-space: pre-wrap; font-family: monospace; }
     </style>
 </head>
 <body>
-    <h1>On-Chain Provenance Tracker</h1>
-    <button id="connectWalletBtn">Connect Wallet</button>
-    <p id="walletAddress"></p>
 
-    <hr>
+    <div class="container">
+        <header>
+            <h1>Provenance Tracker</h1>
+            <button id="connectWalletBtn">Connect Wallet</button>
+        </header>
 
-    <h2>Register a New Item</h2>
-    <input type="text" id="itemName" placeholder="Enter item name">
-    <button id="registerBtn">Register Item</button>
+        <p id="walletAddress"></p>
 
-    <hr>
+        <section class="card">
+            <h2>Register a New Item</h2>
+            <div class="form-group">
+                <input type="text" id="itemName" placeholder="e.g., 'Signed Soumitra Jersey'">
+                <button id="registerBtn">Register</button>
+            </div>
+        </section>
 
-    <h2>Registered Items</h2>
-    <div id="itemsContainer">Loading items...</div>
+        <section class="card">
+            <h2>Registered Items</h2>
+            <div id="itemsContainer">Loading...</div>
+        </section>
+    </div>
+
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal-content">
+            <button class="close-btn" id="closeModalBtn">&times;</button>
+            <h2>Item Provenance</h2>
+            <div id="historyContent"></div>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <script src="app.js"></script>

@@ -119,24 +119,35 @@ const contractABI = [
 ];
 // --- END IMPORTANT ---
 
-
 let provider;
 let signer;
 let contract;
 
-// Wait for the page to load
+// Main function that runs after the page is loaded
 document.addEventListener('DOMContentLoaded', async () => {
-    // Find our buttons and containers
+    // --- Element Selectors ---
     const connectWalletBtn = document.getElementById('connectWalletBtn');
     const registerBtn = document.getElementById('registerBtn');
     const itemsContainer = document.getElementById('itemsContainer');
     const walletAddressEl = document.getElementById('walletAddress');
+    const modal = document.getElementById('historyModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
 
-    // Attach event listeners
+    // --- Event Listeners ---
     connectWalletBtn.addEventListener('click', connectWallet);
     registerBtn.addEventListener('click', registerItem);
+    
+    // Listeners to close the history modal
+    closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
 
-    // Initial setup
+    // --- Core Functions ---
+
+    // Initial setup when the page loads
     async function init() {
         if (typeof window.ethereum !== 'undefined') {
             provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -148,19 +159,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Connects to the user's MetaMask wallet
     async function connectWallet() {
         try {
             await window.ethereum.request({ method: 'eth_requestAccounts' });
             signer = provider.getSigner();
             const walletAddress = await signer.getAddress();
-            walletAddressEl.textContent = "Connected: " + walletAddress;
+            walletAddressEl.textContent = walletAddress;
             contract = new ethers.Contract(contractAddress, contractABI, signer);
-            await loadItems();
+            await loadItems(); // Reload items to show user-specific UI
         } catch (error) {
             console.error("User rejected connection", error);
         }
     }
 
+    // Registers a new item by sending a transaction
     async function registerItem() {
         if (!signer) {
             alert("Please connect your wallet first.");
@@ -173,12 +186,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
-            console.log(`Registering item: "${itemName}"...`);
             const tx = await contract.registerItem(itemName);
             alert("Transaction sent! Waiting for confirmation...");
             await tx.wait();
             alert("Item registered successfully!");
-            // Listen for the event to refresh UI, or just reload everything
             await loadItems();
         } catch (error) {
             console.error("Error registering item:", error);
@@ -186,72 +197,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    async function loadItems() {
-        itemsContainer.innerHTML = 'Loading items...';
-        try {
-            const filter = contract.filters.ItemRegistered();
-            const events = await contract.queryFilter(filter, 0, 'latest');
-
-            if (events.length === 0) {
-                itemsContainer.innerHTML = "No items have been registered yet.";
-                return;
-            }
-
-            // Get the current user's address if they are connected
-            const currentUserAddress = signer ? (await signer.getAddress()).toLowerCase() : '';
-
-            itemsContainer.innerHTML = '';
-            for (const event of events.reverse()) {
-                const { id, owner, name } = event.args;
-
-                const currentItem = await contract.items(id);
-                const currentOwner = currentItem.owner.toLowerCase();
-
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'item';
-
-                let transferUI = '';
-                // Only show the transfer UI if the connected user is the current owner
-                if (signer && currentOwner === currentUserAddress) {
-                    transferUI = `
-                    <div style="margin-top: 10px;">
-                        <input type="text" id="transfer-addr-${id}" placeholder="Enter new owner address">
-                        <button class="transfer-btn" data-id="${id}">Transfer</button>
-                    </div>
-                `;
-                }
-
-                itemDiv.innerHTML = `
-                    <p><strong>ID:</strong> ${id.toString()}</p>
-                    <p><strong>Name:</strong> ${name}</p>
-                    <p><strong>Owner:</strong> ${currentItem.owner}</p>
-                    ${transferUI}
-                    <button class="history-btn" data-id="${id.toString()}" style="margin-top: 5px;">View History</button>
-                `;
-                itemsContainer.appendChild(itemDiv);
-            }
-
-            // Add event listeners to all new transfer buttons
-            document.querySelectorAll('.transfer-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const itemId = e.target.getAttribute('data-id');
-                    transferItem(itemId); // This now calls your transfer function
-                });
-            });
-
-            // Add event listeners to all new history buttons
-            document.querySelectorAll('.history-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const itemId = e.target.getAttribute('data-id');
-                    showHistory(itemId);
-                });
-            });
-
-        } catch (error) {
-            console.error("Error loading items:", error);
-            itemsContainer.innerHTML = "Error loading items. See browser console for details.";
-        }
-    }
+    // Transfers an item's ownership by sending a transaction
     async function transferItem(itemId) {
         if (!signer) {
             alert("Please connect your wallet first.");
@@ -264,12 +210,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
-            console.log(`Transferring item ${itemId} to ${newOwnerAddress}...`);
             const tx = await contract.transferOwnership(itemId, newOwnerAddress);
             alert("Transaction sent! Waiting for confirmation...");
             await tx.wait();
             alert("Ownership transferred successfully!");
-            // Reload items to reflect the change
             await loadItems();
         } catch (error) {
             console.error("Error transferring ownership:", error);
@@ -277,41 +221,99 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Fetches and displays the provenance history in the modal
     async function showHistory(itemId) {
-        alert(`Fetching history for Item ID: ${itemId}...`);
-        try {
-            // --- THIS IS THE KEY CHANGE ---
-            // We ensure itemId is treated as a number for the filter.
-            const numericItemId = ethers.BigNumber.from(itemId);
+        const historyContent = document.getElementById('historyContent');
+        historyContent.innerHTML = 'Fetching history...';
+        modal.style.display = 'flex'; // Show the modal
 
-            // Create a filter for the OwnershipTransferred event, specifically for our item ID
+        try {
+            const numericItemId = ethers.BigNumber.from(itemId); 
             const filter = contract.filters.OwnershipTransferred(numericItemId);
             const events = await contract.queryFilter(filter, 0, 'latest');
 
             if (events.length === 0) {
-                alert(`No transfer history found for Item ID: ${itemId}.`);
+                historyContent.innerText = `No transfer history found for Item ID: ${itemId}.`;
                 return;
             }
 
-            // Format the history into a readable string
-            let historyText = `Ownership History for Item ID: ${itemId}\n\n`;
-            // The first owner is the 'to' address of the first transfer event's predecessor.
-            // For simplicity, we'll derive it from the first event.
-            historyText += `Original Owner: ${events[0].args.from}\n\n`;
+            let historyText = '';
+            const originalOwner = events[0].args.from;
+            historyText += `Original Owner:\n${originalOwner}\n\n`;
+            historyText += `Transaction History:\n`;
+
             events.forEach((event, index) => {
                 const { from, to } = event.args;
-                historyText += `Transfer ${index + 1}:\nFrom: ${from}\nTo:   ${to}\n\n`;
+                historyText += `\n${index + 1}. From: ${from}\n   To:   ${to}`;
             });
 
-            // Display the history in an alert box
-            alert(historyText);
+            historyContent.innerText = historyText;
 
         } catch (error) {
-            // If it still fails, the console will have the detailed error from the blockchain node.
             console.error("Error fetching history:", error);
-            alert("Could not fetch item history. See browser console for details.");
+            historyContent.innerText = "Could not fetch item history.";
         }
     }
 
+    // Fetches all items and renders them on the page
+    async function loadItems() {
+        itemsContainer.innerHTML = 'Loading items...';
+        try {
+            const filter = contract.filters.ItemRegistered();
+            const events = await contract.queryFilter(filter, 0, 'latest');
+
+            if (events.length === 0) {
+                itemsContainer.innerHTML = "No items have been registered yet.";
+                return;
+            }
+
+            const currentUserAddress = signer ? (await signer.getAddress()).toLowerCase() : '';
+            itemsContainer.innerHTML = ''; // Clear the container
+
+            for (const event of events.reverse()) { // Show newest first
+                const { id, name } = event.args;
+                const currentItem = await contract.items(id);
+                const currentOwner = currentItem.owner.toLowerCase();
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'item';
+                
+                let transferUI = '';
+                if (signer && currentOwner === currentUserAddress) {
+                    transferUI = `
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <input type="text" id="transfer-addr-${id}" placeholder="Enter new owner address">
+                            <button class="transfer-btn" data-id="${id}">Transfer</button>
+                        </div>
+                    `;
+                }
+
+                itemDiv.innerHTML = `
+                    <p><strong>ID:</strong> <span>${id.toString()}</span></p>
+                    <p><strong>Name:</strong> ${name}</p>
+                    <p><strong>Owner:</strong> <span>${currentItem.owner}</span></p>
+                    <div class="item-footer">
+                        <button class="history-btn" data-id="${id.toString()}">View History</button>
+                    </div>
+                    ${transferUI}
+                `;
+                itemsContainer.appendChild(itemDiv);
+            }
+
+            // Attach listeners to all newly created buttons
+            document.querySelectorAll('.transfer-btn').forEach(button => {
+                button.addEventListener('click', e => transferItem(e.target.dataset.id));
+            });
+            document.querySelectorAll('.history-btn').forEach(button => {
+                button.addEventListener('click', e => showHistory(e.target.dataset.id));
+            });
+
+        } catch (error) {
+            console.error("Error loading items:", error);
+            itemsContainer.innerHTML = "Error loading items. See browser console for details.";
+        }
+    }
+
+    // --- Run Initialization ---
     init();
 });
