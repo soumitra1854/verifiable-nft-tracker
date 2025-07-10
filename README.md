@@ -68,4 +68,4 @@ To run this project locally, follow these steps.
 The `Tracker.sol` smart contract has been deployed to the Sepolia testnet and can be viewed on Etherscan.
 
 -   **Contract Address:** `0x0c5fc78A13637038507f4dF14801d7fA8a059F39`
--   **Etherscan Link:** `https://sepolia.etherscan.io/address/0x0c5fc78A13637038507f4dF14801d7fA8a059F39`
+-   **Etherscan Link:** [https://sepolia.etherscan.io/address/0x0c5fc78A13637038507f4dF14801d7fA8a059F39](https://sepolia.etherscan.io/address/0x0c5fc78A13637038507f4dF14801d7fA8a059F39)
